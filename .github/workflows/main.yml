@@ -1,0 +1,51 @@
+name: Deploy Docker app to EC2
+
+on:
+  push:
+    branches: [ "main" ]   # change if your main branch is different
+  workflow_dispatch:       # allow manual run
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Copy project files to EC2 (into ~/app)
+      - name: Copy project to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          source: "."
+          target: "~/app"
+
+      # Build & run Docker container on EC2
+      - name: Deploy on EC2 with Docker
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          script: |
+            cd ~/app
+
+            echo "Building Docker image..."
+            sudo docker build -t my-app-image:latest .
+
+            echo "Stopping old container if running..."
+            if [ "$(sudo docker ps -q -f name=my-app-container)" ]; then
+              sudo docker stop my-app-container
+              sudo docker rm my-app-container
+            fi
+
+            echo "Starting new container..."
+            # change 3000 to your app's internal port
+            sudo docker run -d --name my-app-container -p 80:3000 my-app-image:latest
+
+            echo "Deployed successfully 🚀"
