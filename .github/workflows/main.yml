@@ -22,7 +22,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           source: "."
-          target: "~/app"
+          target: "~/lms-public"
 
       # Build & run Docker container on EC2
       - name: Deploy on EC2 with Docker
@@ -33,10 +33,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
-            cd ~/app
+            cd ~/lms-public/webapp
 
             echo "Building Docker image..."
-            sudo docker build -t my-app-image:latest .
+            sudo docker build -t my-app-image:v1 .
 
             echo "Stopping old container if running..."
             if [ "$(sudo docker ps -q -f name=my-app-container)" ]; then
